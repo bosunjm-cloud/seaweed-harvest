@@ -507,7 +507,7 @@ function renderMapTable(rows, includeMarkerFocus) {
             ? ` tabindex="0" role="button" data-focus-marker="${escapeAttribute(community.community_id)}"`
             : "";
           return `
-            <tr class="map-location-row ${escapeAttribute(mapStatusForCommunity(community))}"${focusAttr}>
+            <tr class="map-location-row ${includeMarkerFocus ? "farm" : "muted"}"${focusAttr}>
               <td><strong>${escapeHtml(community.community_name || "-")}</strong></td>
               <td>${escapeHtml(community.community_id || "-")}</td>
               <td>${escapeHtml(formatCoordinatePair(community.gps_latitude, community.gps_longitude))}</td>
@@ -553,7 +553,7 @@ function renderLeafletMap(mapped) {
     const status = mapStatusForCommunity(community);
     const marker = window.L.marker(
       [Number(community.gps_latitude), Number(community.gps_longitude)],
-      { icon: markerIcon(status) }
+      { icon: markerIcon() }
     )
       .addTo(state.map)
       .bindPopup(renderCommunityPopup(community, status));
@@ -565,10 +565,10 @@ function renderLeafletMap(mapped) {
   window.setTimeout(() => state.map?.invalidateSize(), 100);
 }
 
-function markerIcon(status) {
+function markerIcon() {
   return window.L.divIcon({
     className: "",
-    html: `<span class="map-marker-icon ${escapeAttribute(status)}">C</span>`,
+    html: `<span class="map-marker-icon farm">&#127807;</span>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
     popupAnchor: [0, -15]
@@ -608,6 +608,14 @@ function focusMapMarkerFromEvent(event) {
   if (!marker || !state.map) return;
   state.map.flyTo(marker.getLatLng(), Math.max(state.map.getZoom(), 13), { duration: 0.45 });
   window.setTimeout(() => marker.openPopup(), 420);
+  setActiveMapListItem(item.dataset.focusMarker);
+  els.adminCommunityMap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function setActiveMapListItem(key) {
+  document.querySelectorAll("[data-focus-marker]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.focusMarker === key);
+  });
 }
 
 function showMapFallback(message) {
