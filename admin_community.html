@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Admin Per Community - Seaweed Aggregation</title>
+  <link rel="stylesheet" href="./assets/css/ag.css">
+</head>
+<body class="admin-console-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div>
+        <p class="eyebrow">Seaweed aggregation</p>
+        <h1>Admin</h1>
+      </div>
+      <div class="header-actions admin-header-controls">
+        <nav class="app-nav" aria-label="Main navigation">
+          <a href="./index.html">Collection</a>
+          <a href="./admin.html" aria-current="page">Admin</a>
+          <a href="./registry.html">Registry</a>
+          <a href="./tags.html">Tags</a>
+        </nav>
+        <span id="adminConnectionStatus" class="status-pill status-muted">Loading</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell admin-shell admin-layout">
+    <aside class="admin-sidebar" aria-label="Admin menu">
+      <h2>Admin</h2>
+      <a href="./admin.html">Dashboard</a>
+      <p class="admin-menu-heading">Registry</p>
+      <a href="./admin_registry.html#member-registry">Member Registry</a>
+      <a href="./admin_registry.html#community-registry">Community Registry</a>
+      <p class="admin-menu-heading">Map</p>
+      <a href="./admin_map.html">Community Map</a>
+      <p class="admin-menu-heading">Data</p>
+      <a href="./admin_monthly.html">Monthly</a>
+      <a href="./admin_community.html" aria-current="page">Per Community</a>
+      <a href="./admin_ledger.html">Collection Ledger</a>
+    </aside>
+
+    <section class="admin-content">
+      <section class="panel admin-page-section">
+        <div class="section-head compact admin-section-title">
+          <h2>Per Community</h2>
+          <span id="communitySummaryStatus" class="status-pill">Ready</span>
+        </div>
+        <div class="admin-card-body standalone">
+          <div class="admin-toolbar admin-filter-grid">
+            <label>
+              Community
+              <select id="communitySummarySelect"></select>
+            </label>
+            <label>
+              Period
+              <select id="communityPeriodPreset">
+                <option value="30">Last 30 days</option>
+                <option value="7">Last 7 days</option>
+                <option value="this_month">This month</option>
+                <option value="month">Selected month</option>
+                <option value="custom">Custom dates</option>
+                <option value="all">All records</option>
+              </select>
+            </label>
+            <label>
+              Month
+              <input id="communityMonth" type="month">
+            </label>
+            <label>
+              From
+              <input id="communityStartDate" type="date">
+            </label>
+            <label>
+              To
+              <input id="communityEndDate" type="date">
+            </label>
+            <button id="reloadCommunitySummary" type="button">Load</button>
+          </div>
+          <div id="communitySummaryMetrics" class="admin-metric-grid compact"></div>
+          <div class="admin-two-column">
+            <section class="admin-subsection">
+              <div class="section-head compact">
+                <h3>Grade Summary</h3>
+              </div>
+              <div class="responsive-table-wrap">
+                <table class="management-table admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Grade</th>
+                      <th>Collections</th>
+                      <th>Total kg</th>
+                      <th>KSH</th>
+                      <th>Avg kg</th>
+                    </tr>
+                  </thead>
+                  <tbody id="communityGradeRows"></tbody>
+                </table>
+              </div>
+            </section>
+            <section class="admin-subsection">
+              <div class="section-head compact">
+                <h3>Monthly Breakdown</h3>
+              </div>
+              <div class="responsive-table-wrap">
+                <table class="management-table admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Collections</th>
+                      <th>Total kg</th>
+                      <th>A kg</th>
+                      <th>B kg</th>
+                      <th>C kg</th>
+                    </tr>
+                  </thead>
+                  <tbody id="communityMonthlyRows"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./assets/js/admin_page.js"></script>
+</body>
+</html>
+

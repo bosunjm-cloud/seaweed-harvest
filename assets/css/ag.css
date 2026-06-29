@@ -783,6 +783,11 @@ input[readonly] {
   border-top: 1px solid var(--border-soft);
 }
 
+.admin-card-body.standalone {
+  padding: 0;
+  border-top: 0;
+}
+
 .admin-toolbar {
   display: flex;
   align-items: end;

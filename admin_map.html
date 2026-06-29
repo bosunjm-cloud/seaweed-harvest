@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Admin Map - Seaweed Aggregation</title>
+  <link rel="stylesheet" href="./assets/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="./assets/css/ag.css">
+</head>
+<body class="admin-console-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div>
+        <p class="eyebrow">Seaweed aggregation</p>
+        <h1>Admin</h1>
+      </div>
+      <div class="header-actions admin-header-controls">
+        <nav class="app-nav" aria-label="Main navigation">
+          <a href="./index.html">Collection</a>
+          <a href="./admin.html" aria-current="page">Admin</a>
+          <a href="./registry.html">Registry</a>
+          <a href="./tags.html">Tags</a>
+        </nav>
+        <span id="adminConnectionStatus" class="status-pill status-muted">Loading</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell admin-shell admin-layout">
+    <aside class="admin-sidebar" aria-label="Admin menu">
+      <h2>Admin</h2>
+      <a href="./admin.html">Dashboard</a>
+      <p class="admin-menu-heading">Registry</p>
+      <a href="./admin_registry.html#member-registry">Member Registry</a>
+      <a href="./admin_registry.html#community-registry">Community Registry</a>
+      <p class="admin-menu-heading">Map</p>
+      <a href="./admin_map.html" aria-current="page">Community Map</a>
+      <p class="admin-menu-heading">Data</p>
+      <a href="./admin_monthly.html">Monthly</a>
+      <a href="./admin_community.html">Per Community</a>
+      <a href="./admin_ledger.html">Collection Ledger</a>
+    </aside>
+
+    <section class="admin-content">
+      <section class="panel admin-page-section">
+        <div class="section-head compact admin-section-title">
+          <h2>Map</h2>
+          <span id="mapStatus" class="status-pill status-muted">Loading</span>
+        </div>
+        <div class="admin-map-layout">
+          <div class="admin-map-panel">
+            <div id="adminCommunityMap" class="admin-map" role="application" aria-label="Community map"></div>
+            <div id="adminMapFallback" class="empty-state map-fallback" hidden></div>
+          </div>
+          <div class="map-list-stack">
+            <section class="panel map-list-panel">
+              <div class="section-head compact">
+                <h3>Mapped Communities</h3>
+                <span id="mappedCommunityCount" class="status-pill">0</span>
+              </div>
+              <div id="mappedCommunityList" class="map-table-wrap"></div>
+            </section>
+            <section class="panel map-list-panel">
+              <div class="section-head compact">
+                <h3>Needs GPS</h3>
+                <span id="missingGpsCount" class="status-pill status-muted">0</span>
+              </div>
+              <div id="missingGpsList" class="map-table-wrap"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./assets/vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="./assets/js/admin_page.js"></script>
+</body>
+</html>
+

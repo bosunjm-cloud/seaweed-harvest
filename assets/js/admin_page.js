@@ -4,17 +4,16 @@ import { dataModeLabel, selectRows } from "./supabase_client.js";
 const TABLES = {
   overview: "ag_admin_overview",
   communityDashboard: "ag_community_dashboard",
-  memberSummary: "ag_member_registry_summary",
-  collections: APP_CONFIG.tables.collections
+  memberSummary: "ag_member_registry_summary"
 };
 
 const RPC = {
   monthly: "ag_admin_monthly_summary",
   communityPeriod: "ag_admin_community_period_summary",
-  communityGrades: "ag_admin_community_grade_summary"
+  communityGrades: "ag_admin_community_grade_summary",
+  ledger: "ag_admin_collection_ledger_page"
 };
 
-const AUTH_SESSION_KEY = "seaweed_ag:admin_auth_session";
 const LEDGER_PAGE_SIZE = 50;
 const EXPORT_MAX_ROWS = 5000;
 const KENYA_COAST_VIEW = {
@@ -23,14 +22,13 @@ const KENYA_COAST_VIEW = {
 };
 
 const state = {
-  overview: null,
+  overview: {},
   communities: [],
   members: [],
   monthlyRows: [],
   communitySummary: null,
   communityGradeRows: [],
   communityMonthlyRows: [],
-  authSession: null,
   ledgerRows: [],
   ledgerTotal: 0,
   ledgerPage: 0,
@@ -48,17 +46,12 @@ async function init() {
   cacheElements();
   setDefaultControls();
   bindEvents();
-  loadStoredAuthSession();
-  updateAuthUi();
-  await verifyStoredSession();
   await loadAdminData();
-  if (state.authSession) await loadLedger();
 }
 
 function cacheElements() {
   [
     "adminConnectionStatus",
-    "adminSignOut",
     "reloadAdminDashboard",
     "metricTotalKg",
     "metricAcceptedKg",
@@ -107,12 +100,6 @@ function cacheElements() {
     "communityGradeRows",
     "communityMonthlyRows",
     "ledgerCount",
-    "ledgerAuthPanel",
-    "adminAuthStatus",
-    "adminAuthForm",
-    "adminEmail",
-    "adminPassword",
-    "adminSignIn",
     "ledgerPeriodPreset",
     "ledgerMonth",
     "ledgerStartDate",
@@ -138,41 +125,39 @@ function setDefaultControls() {
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  els.monthlyYear.value = String(currentYear);
-  els.communityMonth.value = currentMonth;
-  els.ledgerMonth.value = currentMonth;
-  els.communityStartDate.value = dateInputValue(thirtyDaysAgo);
-  els.communityEndDate.value = dateInputValue(now);
-  els.ledgerStartDate.value = dateInputValue(thirtyDaysAgo);
-  els.ledgerEndDate.value = dateInputValue(now);
+  if (els.monthlyYear) els.monthlyYear.value = String(currentYear);
+  if (els.communityMonth) els.communityMonth.value = currentMonth;
+  if (els.ledgerMonth) els.ledgerMonth.value = currentMonth;
+  if (els.communityStartDate) els.communityStartDate.value = dateInputValue(thirtyDaysAgo);
+  if (els.communityEndDate) els.communityEndDate.value = dateInputValue(now);
+  if (els.ledgerStartDate) els.ledgerStartDate.value = dateInputValue(thirtyDaysAgo);
+  if (els.ledgerEndDate) els.ledgerEndDate.value = dateInputValue(now);
 }
 
 function bindEvents() {
-  els.reloadAdminDashboard.addEventListener("click", loadAdminData);
-  els.memberSearch.addEventListener("input", renderMemberRegistry);
-  els.communitySearch.addEventListener("input", renderCommunityRegistry);
-  els.mappedCommunityList.addEventListener("click", focusMapMarkerFromEvent);
-  els.mappedCommunityList.addEventListener("keydown", focusMapMarkerFromEvent);
-  els.reloadMonthly.addEventListener("click", () => loadMonthly());
-  els.reloadCommunitySummary.addEventListener("click", () => loadCommunitySummary());
-  els.communitySummarySelect.addEventListener("change", () => loadCommunitySummary());
-  els.adminAuthForm.addEventListener("submit", signIn);
-  els.adminSignOut.addEventListener("click", signOut);
-  els.reloadLedger.addEventListener("click", () => {
+  els.reloadAdminDashboard?.addEventListener("click", loadAdminData);
+  els.memberSearch?.addEventListener("input", renderMemberRegistry);
+  els.communitySearch?.addEventListener("input", renderCommunityRegistry);
+  els.mappedCommunityList?.addEventListener("click", focusMapMarkerFromEvent);
+  els.mappedCommunityList?.addEventListener("keydown", focusMapMarkerFromEvent);
+  els.reloadMonthly?.addEventListener("click", () => loadMonthly());
+  els.reloadCommunitySummary?.addEventListener("click", () => loadCommunitySummary());
+  els.communitySummarySelect?.addEventListener("change", () => loadCommunitySummary());
+  els.reloadLedger?.addEventListener("click", () => {
     state.ledgerPage = 0;
     loadLedger();
   });
-  els.ledgerPrevPage.addEventListener("click", () => {
+  els.ledgerPrevPage?.addEventListener("click", () => {
     if (state.ledgerPage <= 0) return;
     state.ledgerPage -= 1;
     loadLedger();
   });
-  els.ledgerNextPage.addEventListener("click", () => {
+  els.ledgerNextPage?.addEventListener("click", () => {
     if ((state.ledgerPage + 1) * LEDGER_PAGE_SIZE >= state.ledgerTotal) return;
     state.ledgerPage += 1;
     loadLedger();
   });
-  els.exportLedgerCsv.addEventListener("click", exportLedgerCsv);
+  els.exportLedgerCsv?.addEventListener("click", exportLedgerCsv);
 
   document.querySelectorAll("[data-ledger-sort]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -203,13 +188,14 @@ async function loadAdminData() {
     state.communities = communities;
     state.members = members;
 
-    renderDashboard();
     renderSelectors();
+    renderDashboard();
     renderMemberRegistry();
     renderCommunityRegistry();
     renderMapSection();
     await loadMonthly({ quiet: true });
     await loadCommunitySummary({ quiet: true });
+    await loadLedger({ quiet: true });
 
     const mode = dataModeLabel();
     setConnectionStatus(mode, mode === "Preview" ? "status-muted" : "");
@@ -221,18 +207,23 @@ async function loadAdminData() {
 
 function renderSetupError(error) {
   const message = `Admin reporting SQL is not available yet. ${error.message}`;
-  els.communityTotalsRows.innerHTML = emptyRow(8, message);
-  els.memberRegistryRows.innerHTML = emptyRow(9, message);
-  els.communityRegistryRows.innerHTML = emptyRow(11, message);
-  els.monthlyRows.innerHTML = emptyRow(13, message);
-  els.communityGradeRows.innerHTML = emptyRow(5, message);
-  els.communityMonthlyRows.innerHTML = emptyRow(6, message);
-  els.mapStatus.textContent = "Setup needed";
-  els.mapStatus.className = "status-pill status-muted";
-  showMapFallback(message);
+  if (els.communityTotalsRows) els.communityTotalsRows.innerHTML = emptyRow(8, message);
+  if (els.memberRegistryRows) els.memberRegistryRows.innerHTML = emptyRow(9, message);
+  if (els.communityRegistryRows) els.communityRegistryRows.innerHTML = emptyRow(11, message);
+  if (els.monthlyRows) els.monthlyRows.innerHTML = emptyRow(13, message);
+  if (els.communityGradeRows) els.communityGradeRows.innerHTML = emptyRow(5, message);
+  if (els.communityMonthlyRows) els.communityMonthlyRows.innerHTML = emptyRow(6, message);
+  if (els.ledgerRows) els.ledgerRows.innerHTML = emptyRow(13, message);
+  if (els.mapStatus) {
+    els.mapStatus.textContent = "Setup needed";
+    els.mapStatus.className = "status-pill status-muted";
+  }
+  if (els.adminMapFallback) showMapFallback(message);
 }
 
 function renderDashboard() {
+  if (!els.metricTotalKg) return;
+
   const row = state.overview || {};
   setMetric("metricTotalKg", formatKg(row.total_weight_kg));
   setMetric("metricAcceptedKg", formatKg(row.accepted_weight_kg));
@@ -253,6 +244,8 @@ function renderDashboard() {
 }
 
 function renderCommunityTotals() {
+  if (!els.communityTotalsRows) return;
+
   els.communityTotalsCount.textContent = `${state.communities.length} rows`;
   els.communityTotalsRows.innerHTML = state.communities.map((community) => `
     <tr>
@@ -269,6 +262,8 @@ function renderCommunityTotals() {
 }
 
 function renderMemberRegistry() {
+  if (!els.memberRegistryRows) return;
+
   const rows = filteredMembers();
   els.memberRegistryCount.textContent = `${rows.length} rows`;
   els.memberRegistryRows.innerHTML = rows.map((member) => `
@@ -287,6 +282,8 @@ function renderMemberRegistry() {
 }
 
 function renderCommunityRegistry() {
+  if (!els.communityRegistryRows) return;
+
   const rows = filteredCommunities();
   els.communityRegistryCount.textContent = `${rows.length} rows`;
   els.communityRegistryRows.innerHTML = rows.map((community) => `
@@ -314,17 +311,19 @@ function renderSelectors() {
       communityLabel(community)
     ])
   ];
-  setSelectOptions(els.monthlyCommunity, communityOptions, els.monthlyCommunity.value);
-  setSelectOptions(els.ledgerCommunity, communityOptions, els.ledgerCommunity.value);
-  setSelectOptions(els.communitySummarySelect, communityOptions, selectedCommunityValue());
+
+  if (els.monthlyCommunity) setSelectOptions(els.monthlyCommunity, communityOptions, els.monthlyCommunity.value);
+  if (els.ledgerCommunity) setSelectOptions(els.ledgerCommunity, communityOptions, els.ledgerCommunity.value);
+  if (els.communitySummarySelect) setSelectOptions(els.communitySummarySelect, communityOptions, selectedCommunityValue());
 }
 
 function selectedCommunityValue() {
-  if (els.communitySummarySelect.value) return els.communitySummarySelect.value;
+  if (els.communitySummarySelect?.value) return els.communitySummarySelect.value;
   return state.communities[0]?.community_id || "";
 }
 
 async function loadMonthly(options = {}) {
+  if (!els.monthlyRows) return;
   if (!options.quiet) els.monthlyCount.textContent = "Loading";
 
   try {
@@ -342,6 +341,8 @@ async function loadMonthly(options = {}) {
 }
 
 function renderMonthly() {
+  if (!els.monthlyRows) return;
+
   els.monthlyCount.textContent = `${state.monthlyRows.length} rows`;
   els.monthlyRows.innerHTML = state.monthlyRows.map((row) => `
     <tr>
@@ -363,7 +364,9 @@ function renderMonthly() {
 }
 
 async function loadCommunitySummary(options = {}) {
+  if (!els.communityGradeRows) return;
   if (!options.quiet) els.communitySummaryStatus.textContent = "Loading";
+
   const range = dateRangeFromControls(
     els.communityPeriodPreset.value,
     els.communityMonth.value,
@@ -407,6 +410,8 @@ async function loadCommunitySummary(options = {}) {
 }
 
 function renderCommunitySummary(range) {
+  if (!els.communitySummaryMetrics) return;
+
   const summary = state.communitySummary || {};
   const metricRows = [
     ["Total kg", formatKg(summary.total_weight_kg)],
@@ -455,6 +460,8 @@ function renderCommunitySummary(range) {
 }
 
 function renderMapSection() {
+  if (!els.adminCommunityMap) return;
+
   const mapped = state.communities.filter(hasGps);
   const missing = state.communities.filter((community) => !hasGps(community));
 
@@ -608,29 +615,19 @@ function showMapFallback(message) {
   els.adminMapFallback.textContent = message;
 }
 
-async function loadLedger() {
-  if (!state.authSession?.access_token) {
-    state.ledgerRows = [];
-    state.ledgerTotal = 0;
-    renderLedger();
-    return;
+async function loadLedger(options = {}) {
+  if (!els.ledgerRows) return;
+  if (!options.quiet) {
+    els.ledgerCount.textContent = "Loading";
+    els.ledgerCount.className = "status-pill status-muted";
   }
 
-  els.ledgerCount.textContent = "Loading";
-  els.ledgerCount.className = "status-pill status-muted";
-
   try {
-    const params = buildLedgerParams();
-    const from = state.ledgerPage * LEDGER_PAGE_SIZE;
-    const to = from + LEDGER_PAGE_SIZE - 1;
-    const result = await supabaseSelectDetailed(TABLES.collections, params, {
-      token: state.authSession.access_token,
-      range: [from, to],
-      count: true
-    });
-
-    state.ledgerRows = result.rows;
-    state.ledgerTotal = result.count ?? result.rows.length;
+    const payload = buildLedgerPayload(LEDGER_PAGE_SIZE, state.ledgerPage * LEDGER_PAGE_SIZE);
+    const resultRows = await supabaseRpc(RPC.ledger, payload);
+    const result = resultRows[0] || {};
+    state.ledgerRows = Array.isArray(result.rows) ? result.rows : [];
+    state.ledgerTotal = Number(result.total_count || 0);
     renderLedger();
   } catch (error) {
     els.ledgerRows.innerHTML = emptyRow(13, writeErrorMessage(error));
@@ -641,16 +638,7 @@ async function loadLedger() {
 }
 
 function renderLedger() {
-  const signedIn = Boolean(state.authSession?.access_token);
-  if (!signedIn) {
-    els.ledgerCount.textContent = "Sign in";
-    els.ledgerCount.className = "status-pill status-muted";
-    els.ledgerRows.innerHTML = emptyRow(13, "Sign in to load the Collection Ledger.");
-    els.ledgerPageStatus.textContent = "Sign in required.";
-    els.ledgerPrevPage.disabled = true;
-    els.ledgerNextPage.disabled = true;
-    return;
-  }
+  if (!els.ledgerRows) return;
 
   els.ledgerCount.textContent = `${state.ledgerTotal} rows`;
   els.ledgerCount.className = "status-pill";
@@ -682,18 +670,12 @@ function renderLedger() {
 }
 
 async function exportLedgerCsv() {
-  if (!state.authSession?.access_token) {
-    setAuthStatus("Sign in before exporting ledger rows.", "error");
-    return;
-  }
+  if (!els.ledgerRows) return;
 
   try {
-    const result = await supabaseSelectDetailed(TABLES.collections, buildLedgerParams(), {
-      token: state.authSession.access_token,
-      range: [0, EXPORT_MAX_ROWS - 1],
-      count: false
-    });
-    const csv = rowsToCsv(result.rows);
+    const resultRows = await supabaseRpc(RPC.ledger, buildLedgerPayload(EXPORT_MAX_ROWS, 0));
+    const rows = Array.isArray(resultRows[0]?.rows) ? resultRows[0].rows : [];
+    const csv = rowsToCsv(rows);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -703,34 +685,12 @@ async function exportLedgerCsv() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    setAuthStatus(`Exported ${result.rows.length} filtered ledger row(s).`);
   } catch (error) {
-    setAuthStatus(writeErrorMessage(error), "error");
+    els.ledgerPageStatus.textContent = writeErrorMessage(error);
   }
 }
 
-function buildLedgerParams() {
-  const params = new URLSearchParams();
-  params.set("select", [
-    "id",
-    "transaction_id",
-    "farmer_id",
-    "farmer_name_snapshot",
-    "community_id",
-    "community_name_snapshot",
-    "sack_id",
-    "collected_at",
-    "gps_latitude",
-    "gps_longitude",
-    "sack_weight_kg",
-    "seaweed_grade",
-    "price_per_kg",
-    "total_price",
-    "notes",
-    "photo_urls",
-    "created_at"
-  ].join(","));
-
+function buildLedgerPayload(pageLimit, pageOffset) {
   const range = dateRangeFromControls(
     els.ledgerPeriodPreset.value,
     els.ledgerMonth.value,
@@ -738,116 +698,17 @@ function buildLedgerParams() {
     els.ledgerEndDate.value
   );
 
-  if (range.start) params.set("collected_at", `gte.${range.start}`);
-  if (range.end) params.append("collected_at", `lt.${range.end}`);
-  if (els.ledgerCommunity.value) params.set("community_id", `eq.${els.ledgerCommunity.value}`);
-  if (els.ledgerGrade.value) params.set("seaweed_grade", `eq.${els.ledgerGrade.value}`);
-
-  const search = sanitizeSearchTerm(els.ledgerSearch.value);
-  if (search) {
-    const pattern = `*${search}*`;
-    const searchFilters = [
-      `transaction_id.ilike.${pattern}`,
-      `sack_id.ilike.${pattern}`,
-      `farmer_id.ilike.${pattern}`,
-      `farmer_name_snapshot.ilike.${pattern}`,
-      `community_id.ilike.${pattern}`,
-      `community_name_snapshot.ilike.${pattern}`
-    ].join(",");
-    params.set("or", `(${searchFilters})`);
-  }
-
-  params.set("order", `${state.ledgerSort}.${state.ledgerDirection},created_at.desc`);
-  return params;
-}
-
-async function signIn(event) {
-  event.preventDefault();
-  setAuthStatus("Signing in...");
-
-  try {
-    const response = await fetch(`${APP_CONFIG.supabase.url}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: {
-        apikey: APP_CONFIG.supabase.anonKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email: requiredText(els.adminEmail.value, "Email"),
-        password: requiredText(els.adminPassword.value, "Password")
-      })
-    });
-
-    if (!response.ok) throw new Error(await authErrorMessage(response));
-
-    state.authSession = normalizeSession(await response.json());
-    writeStoredAuthSession(state.authSession);
-    updateAuthUi();
-    await loadLedger();
-  } catch (error) {
-    setAuthStatus(error.message, "error");
-  }
-}
-
-async function signOut() {
-  const token = state.authSession?.access_token;
-  clearStoredAuthSession();
-  state.authSession = null;
-  updateAuthUi();
-
-  if (token) {
-    try {
-      await fetch(`${APP_CONFIG.supabase.url}/auth/v1/logout`, {
-        method: "POST",
-        headers: {
-          apikey: APP_CONFIG.supabase.anonKey,
-          Authorization: `Bearer ${token}`
-        }
-      });
-    } catch {
-      // Local sign-out is enough for this browser session.
-    }
-  }
-
-  renderLedger();
-}
-
-async function verifyStoredSession() {
-  if (!state.authSession?.access_token) return;
-
-  try {
-    const response = await fetch(`${APP_CONFIG.supabase.url}/auth/v1/user`, {
-      headers: {
-        apikey: APP_CONFIG.supabase.anonKey,
-        Authorization: `Bearer ${state.authSession.access_token}`
-      }
-    });
-
-    if (!response.ok) throw new Error("Stored session expired.");
-
-    state.authSession.user = await response.json();
-    writeStoredAuthSession(state.authSession);
-  } catch {
-    clearStoredAuthSession();
-    state.authSession = null;
-  }
-
-  updateAuthUi();
-}
-
-function updateAuthUi() {
-  const signedIn = Boolean(state.authSession?.access_token);
-  const email = state.authSession?.user?.email || "signed-in user";
-  document.body.classList.toggle("admin-signed-in", signedIn);
-  els.ledgerAuthPanel.hidden = signedIn;
-  els.adminSignOut.hidden = !signedIn;
-  els.reloadLedger.disabled = !signedIn;
-  els.exportLedgerCsv.disabled = !signedIn;
-  if (signedIn) {
-    setAuthStatus(`Signed in as ${email}.`);
-  } else {
-    setAuthStatus("Sign in with an approved Supabase Auth user to load raw collection records.");
-  }
+  return {
+    p_start_at: range.start,
+    p_end_at: range.end,
+    p_community_id: nullableText(els.ledgerCommunity.value),
+    p_grade: nullableText(els.ledgerGrade.value),
+    p_search: nullableText(sanitizeSearchTerm(els.ledgerSearch.value)),
+    p_sort_key: state.ledgerSort,
+    p_sort_direction: state.ledgerDirection,
+    p_page_limit: pageLimit,
+    p_page_offset: pageOffset
+  };
 }
 
 async function supabaseRpc(functionName, payload) {
@@ -867,37 +728,16 @@ async function supabaseRpc(functionName, payload) {
   return text ? JSON.parse(text) : [];
 }
 
-async function supabaseSelectDetailed(table, params, options = {}) {
-  const headers = baseHeaders(options.token);
-  if (options.count) headers.Prefer = "count=exact";
-  if (options.range) headers.Range = `${options.range[0]}-${options.range[1]}`;
-
-  const response = await fetch(`${APP_CONFIG.supabase.restUrl}/${table}?${params.toString()}`, {
-    headers
-  });
-
-  if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}${await responseDetail(response)}`);
-  }
-
-  const text = await response.text();
-  const rows = text ? JSON.parse(text) : [];
-  return {
-    rows,
-    count: contentRangeCount(response.headers.get("content-range"))
-  };
-}
-
-function baseHeaders(token = APP_CONFIG.supabase.anonKey) {
+function baseHeaders() {
   return {
     apikey: APP_CONFIG.supabase.anonKey,
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${APP_CONFIG.supabase.anonKey}`,
     "Content-Type": "application/json"
   };
 }
 
 function filteredMembers() {
-  const query = searchText(els.memberSearch.value);
+  const query = searchText(els.memberSearch?.value);
   if (!query) return state.members;
   return state.members.filter((member) => {
     return searchText([
@@ -912,7 +752,7 @@ function filteredMembers() {
 }
 
 function filteredCommunities() {
-  const query = searchText(els.communitySearch.value);
+  const query = searchText(els.communitySearch?.value);
   if (!query) return state.communities;
   return state.communities.filter((community) => {
     return searchText([
@@ -1069,62 +909,18 @@ function photoCount(value) {
   return Array.isArray(value) ? String(value.length) : "0";
 }
 
-function normalizeSession(session) {
-  return {
-    access_token: session.access_token,
-    refresh_token: session.refresh_token,
-    expires_at: session.expires_at || (session.expires_in ? Math.floor(Date.now() / 1000) + session.expires_in : null),
-    user: session.user || null
-  };
-}
-
-function loadStoredAuthSession() {
-  try {
-    const raw = window.sessionStorage.getItem(AUTH_SESSION_KEY);
-    state.authSession = raw ? JSON.parse(raw) : null;
-  } catch {
-    state.authSession = null;
-  }
-}
-
-function writeStoredAuthSession(session) {
-  try {
-    window.sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
-  } catch {
-    // In-memory session still works if storage is unavailable.
-  }
-}
-
-function clearStoredAuthSession() {
-  try {
-    window.sessionStorage.removeItem(AUTH_SESSION_KEY);
-  } catch {
-    // Ignore restricted storage.
-  }
-}
-
 function setConnectionStatus(text, extraClass = "") {
+  if (!els.adminConnectionStatus) return;
   els.adminConnectionStatus.textContent = text;
   els.adminConnectionStatus.className = `status-pill ${extraClass}`.trim();
-}
-
-function setAuthStatus(message, type = "") {
-  els.adminAuthStatus.textContent = message || "";
-  els.adminAuthStatus.dataset.status = type;
 }
 
 function writeErrorMessage(error) {
   const message = error?.message || String(error);
   if (/401|403|permission|policy|row-level|JWT/i.test(message)) {
-    return `${message}. Sign in with an approved Supabase Auth user for ledger access.`;
+    return `${message}. Collection Ledger is using the public reporting RPC for this prototype stage.`;
   }
   return message;
-}
-
-function contentRangeCount(value) {
-  const match = String(value || "").match(/\/(\d+|\*)$/);
-  if (!match || match[1] === "*") return null;
-  return Number(match[1]);
 }
 
 async function responseDetail(response) {
@@ -1136,21 +932,6 @@ async function responseDetail(response) {
     const detail = await response.text();
     return detail ? ` - ${detail}` : "";
   }
-}
-
-async function authErrorMessage(response) {
-  try {
-    const body = await response.json();
-    return body.msg || body.message || body.error_description || `${response.status} ${response.statusText}`;
-  } catch {
-    return `${response.status} ${response.statusText}`;
-  }
-}
-
-function requiredText(value, label) {
-  const text = String(value || "").trim();
-  if (!text) throw new Error(`${label} is required.`);
-  return text;
 }
 
 function nullableText(value) {
