@@ -581,6 +581,53 @@ input[readonly] {
   color: var(--text-muted);
 }
 
+.registry-table-wrap {
+  max-height: 770px;
+  overflow: auto;
+}
+
+.registry-table-wrap .registry-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--panel);
+}
+
+.registry-table tr.registry-row-selected td {
+  background: rgba(15, 118, 110, 0.045);
+}
+
+.registry-table tr.registry-row-editing td {
+  background: rgba(15, 118, 110, 0.025);
+}
+
+.registry-table td.registry-cell-dirty,
+.registry-table tr.registry-row-selected td.registry-cell-dirty,
+.registry-table tr.registry-row-editing td.registry-cell-dirty,
+.registry-table tr:hover td.registry-cell-dirty {
+  background: #fff4c7;
+}
+
+.registry-edit-control {
+  width: 100%;
+  min-width: 110px;
+  min-height: 26px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.registry-gps-fields {
+  display: inline-grid;
+  grid-template-columns: 92px 92px;
+  gap: 5px;
+}
+
+.registry-save-button {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: #fff7dd;
+}
+
 .section-head {
   display: flex;
   align-items: flex-start;
@@ -1217,12 +1264,12 @@ button:disabled {
 
 .member-registry-table,
 .management-table.member-registry-table {
-  min-width: 1180px;
+  min-width: 1240px;
 }
 
 .community-registry-table,
 .management-table.community-registry-table {
-  min-width: 1540px;
+  min-width: 1600px;
 }
 
 .ledger-table th,
@@ -1248,7 +1295,8 @@ button:disabled {
 }
 
 .ledger-table .selection-cell,
-.today-intake-table .selection-cell {
+.today-intake-table .selection-cell,
+.registry-table .selection-cell {
   width: 38px;
   min-width: 38px;
 }

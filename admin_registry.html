@@ -62,11 +62,15 @@
                 Search member
                 <input id="memberSearch" type="search" autocomplete="off" placeholder="Name, member ID, community">
               </label>
+              <button id="memberRegistryEdit" type="button" hidden>Edit</button>
+              <button id="memberRegistrySave" class="registry-save-button" type="button" hidden>Save</button>
+              <span id="memberRegistryStatus" class="admin-status" aria-live="polite"></span>
             </div>
-            <div class="responsive-table-wrap">
+            <div class="responsive-table-wrap registry-table-wrap">
               <table class="management-table admin-data-table registry-table member-registry-table">
                 <thead>
                   <tr>
+                    <th class="selection-cell"></th>
                     <th>Member ID</th>
                     <th>Name</th>
                     <th>Phone</th>
@@ -97,11 +101,15 @@
                 Search community
                 <input id="communitySearch" type="search" autocomplete="off" placeholder="Community name, ID, chair">
               </label>
+              <button id="communityRegistryEdit" type="button" hidden>Edit</button>
+              <button id="communityRegistrySave" class="registry-save-button" type="button" hidden>Save</button>
+              <span id="communityRegistryStatus" class="admin-status" aria-live="polite"></span>
             </div>
-            <div class="responsive-table-wrap">
+            <div class="responsive-table-wrap registry-table-wrap">
               <table class="management-table admin-data-table registry-table community-registry-table">
                 <thead>
                   <tr>
+                    <th class="selection-cell"></th>
                     <th>Community ID</th>
                     <th>Community</th>
                     <th>GPS</th>
